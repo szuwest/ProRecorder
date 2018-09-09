@@ -138,8 +138,10 @@
     _firstData = NO;
     _isPlaying = true;
     playLen = 0;
-//    [_delegate audioPlay:self didPlayStart: 1];
-    [self notifyObservers:@selector(audioPlay:didPlayStart:) withObjects:self,@(1), nil];
+    dispatch_async(dispatch_get_main_queue(), ^{
+//      [_delegate audioPlay:self didPlayStart: 1];
+      [self notifyObservers:@selector(audioPlay:didPlayStart:) withObjects:self,@(1), nil];
+    });
     [self startDownloadFile];
   } else {
     _dataMode = LOCAL_MODE;
@@ -147,8 +149,11 @@
       playLen = 0;
       [self startQueua];
       _isPlaying = true;
-//      [_delegate audioPlay:self didPlayStart: 1];
-      [self notifyObservers:@selector(audioPlay:didPlayStart:) withObjects:self, @(1), nil];
+      dispatch_async(dispatch_get_main_queue(), ^{
+        //      [_delegate audioPlay:self didPlayStart: 1];
+        [self notifyObservers:@selector(audioPlay:didPlayStart:) withObjects:self, @(1), nil];
+      });
+
     }
   }
 }
@@ -177,8 +182,10 @@
     outQB->mUserData = NULL;
   }
   [_dataArray removeAllObjects];
-//  [_delegate audioPlay:self didPlayStop: 1];
-  [self notifyObservers:@selector(audioPlay:didPlayStop:) withObjects:self, @(1), nil];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    //  [_delegate audioPlay:self didPlayStop: 1];
+    [self notifyObservers:@selector(audioPlay:didPlayStop:) withObjects:self, @(1), nil];
+  });
 }
 
 - (void)dealloc {
@@ -207,10 +214,13 @@
   [sysnLock lock];
   NSData * outData = [NSData dataWithBytes:outQB->mAudioData length:outQB->mAudioDataByteSize];
   playLen += outQB->mAudioDataByteSize;
-//  [_delegate audioPlay:self playData: outData];
-  [self notifyObservers:@selector(audioPlay:playData:) withObjects:self, outData, nil];
-//  [_delegate audioPlay:self playProgress: [self byteLenToMs:playLen] totalMs: [self byteLenToMs:fileSize]];
-  [self notifyObservers:@selector(audioPlay:playProgress:totalMs:) withObjects:self,@([self byteLenToMs:playLen]),@([self byteLenToMs:fileSize]), nil];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    //  [_delegate audioPlay:self playData: outData];
+    [self notifyObservers:@selector(audioPlay:playData:) withObjects:self, outData, nil];
+    //  [_delegate audioPlay:self playProgress: [self byteLenToMs:playLen] totalMs: [self byteLenToMs:fileSize]];
+    [self notifyObservers:@selector(audioPlay:playProgress:totalMs:) withObjects:self,@([self byteLenToMs:playLen]),@([self byteLenToMs:fileSize]), nil];
+  });
+
   if (file == NULL) {
     [sysnLock unlock];
     return;
@@ -243,10 +253,12 @@
     
     NSData * outData = [NSData dataWithBytes:outQB->mAudioData length:outQB->mAudioDataByteSize];
     playLen += outQB->mAudioDataByteSize;
-    //  [_delegate audioPlay:self playData: outData];
-    [self notifyObservers:@selector(audioPlay:playData:) withObjects:self, outData, nil];
-    //  [_delegate audioPlay:self playProgress: [self byteLenToMs:playLen] totalMs: [self byteLenToMs:fileSize]];
-    [self notifyObservers:@selector(audioPlay:playProgress:totalMs:) withObjects:self, @([self byteLenToMs:playLen]),@([self byteLenToMs:fileSize]),nil];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      //  [_delegate audioPlay:self playData: outData];
+      [self notifyObservers:@selector(audioPlay:playData:) withObjects:self, outData, nil];
+      //  [_delegate audioPlay:self playProgress: [self byteLenToMs:playLen] totalMs: [self byteLenToMs:fileSize]];
+      [self notifyObservers:@selector(audioPlay:playProgress:totalMs:) withObjects:self, @([self byteLenToMs:playLen]),@([self byteLenToMs:fileSize]),nil];
+    });
     
     if (_dataArray.count > 0) {
       [sysnLock lock];

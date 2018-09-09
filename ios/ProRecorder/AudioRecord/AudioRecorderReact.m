@@ -162,6 +162,18 @@ RCT_REMAP_METHOD(stopRecord,
   [self.record stop];
 }
 
+RCT_REMAP_METHOD(cancelRecording,
+                 resolver4:(RCTPromiseResolveBlock)resolve
+                 rejecter5:(RCTPromiseRejectBlock)reject)
+{
+  if (!self.record.isRunning) {
+    resolve(NULL);
+    return;
+  }
+  NSLog(@"stopAudioRecording path=%@", self.currentVoicePath);
+  [self.record cancel];
+  resolve(NULL);
+}
 #pragma mark -
 
 - (void)inputQueue:(SIAudioInputQueue *)inputQueue inputData:(NSData *)data numberOfPackets:(NSNumber *)numberOfPackets {
@@ -179,6 +191,9 @@ RCT_REMAP_METHOD(stopRecord,
 
 - (void)inputQueue:(SIAudioInputQueue *)inputQueue didStop:(NSString *)audioSavePath {
   NSLog(@"didStop");
+  if (inputQueue.isCancel) {
+    return;
+  }
   if (audioSavePath && _stopResolve != NULL) {
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
       NSString *wavPath = [SIAudioHelper savePcmToWav:audioSavePath withSample:inputQueue.format.mSampleRate bitPerSample:inputQueue.format.mBitsPerChannel channel:inputQueue.format.mChannelsPerFrame];

@@ -12,5 +12,5 @@
 
 - (NSString*) play:(BOOL) play;
 - (NSString*) record:(BOOL) record;
-
+- (void)reset:(BOOL)reset;
 @end

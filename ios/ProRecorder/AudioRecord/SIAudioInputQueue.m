@@ -20,7 +20,6 @@ const int SIAudioQueueBufferCount = 3;
   NSMutableData *_buffer;
   
   AudioQueueLevelMeterState *_meterStateDB;
-  //    NSOutputStream *_outPutStream;
   NSFileHandle *_fileHandler;
 }
 
@@ -34,6 +33,12 @@ const int SIAudioQueueBufferCount = 3;
  *  @return input queue instance
  */
 + (instancetype)inputQueueWithFormat:(AudioStreamBasicDescription)format bufferDuration:(NSTimeInterval)bufferDuration;
+
+- (BOOL)setProperty:(AudioQueuePropertyID)propertyID dataSize:(UInt32)dataSize data:(const void *)data error:(NSError **)outError;
+- (BOOL)getProperty:(AudioQueuePropertyID)propertyID dataSize:(UInt32 *)dataSize data:(void *)data error:(NSError **)outError;
+- (BOOL)getPropertySize:(AudioQueuePropertyID)propertyID dataSize:(UInt32 *)dataSize error:(NSError **)outError;
+- (BOOL)setParameter:(AudioQueueParameterID)parameterId value:(AudioQueueParameterValue)value error:(NSError **)outError;
+- (BOOL)getParameter:(AudioQueueParameterID)parameterId value:(AudioQueueParameterValue *)value error:(NSError **)outError;
 @end
 
 @implementation SIAudioInputQueue
@@ -123,8 +128,11 @@ const int SIAudioQueueBufferCount = 3;
     }
     NSError *error = nil;
     [self _errorForOSStatus:status error:&error];
-    [self notifyObservers:@selector(inputQueue:errorOccur:) withObjects:self, error,nil];
-//    [_delegate inputQueue:self errorOccur:error];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [self notifyObservers:@selector(inputQueue:errorOccur:) withObjects:self, error,nil];
+      //    [_delegate inputQueue:self errorOccur:error];
+    });
+
     return NO;
   }
   return YES;
@@ -161,6 +169,7 @@ const int SIAudioQueueBufferCount = 3;
     NSLog(@"is recording already");
     return false;
   }
+  _isCancel = NO;
   AVAudioSession *audioSession = [AVAudioSession sharedInstance];
   NSError *error;
   [audioSession setCategory:AVAudioSessionCategoryRecord error:&error];
@@ -175,9 +184,12 @@ const int SIAudioQueueBufferCount = 3;
   [self _updateMeteringEnabled];
   OSStatus status = AudioQueueStart(_audioQueue, NULL);
   _started = status == noErr;
-  if (_started) {
-    [self notifyObservers:@selector(inputQueueDidStart:) withObject:self];
-  }
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (_started) {
+      [self notifyObservers:@selector(inputQueueDidStart:) withObject:self];
+    }
+  });
+  
   return _started;
 }
 
@@ -232,6 +244,11 @@ const int SIAudioQueueBufferCount = 3;
     [weakSelf closeFile];
   });
   return status == noErr;
+}
+
+- (void)cancel {
+  _isCancel = YES;
+  [self stop];
 }
 
 - (BOOL)available
@@ -342,16 +359,16 @@ static void MCAudioQueueInuputCallback(void *inClientData,
     [_buffer appendBytes:buffer->mAudioData length:buffer->mAudioDataByteSize];
     if (self.audioSavePath) {
       __block NSData *data = [[NSData alloc] initWithBytes:buffer->mAudioData length:buffer->mAudioDataByteSize];
-//      dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        [self appendData:data];
-//      });
+      [self appendData:data];
     }
     if ([_buffer length] >= _bufferSize)
     {
       NSRange range = NSMakeRange(0, _bufferSize);
       NSData *subData = [_buffer subdataWithRange:range];
-//      [_delegate inputQueue:self inputData:subData numberOfPackets:inNumberPacketDescriptions];
-      [self notifyObservers:@selector(inputQueue:inputData:numberOfPackets:) withObjects:self, subData, @(inNumberPacketDescriptions), nil];
+      dispatch_async(dispatch_get_main_queue(), ^{
+        //      [_delegate inputQueue:self inputData:subData numberOfPackets:inNumberPacketDescriptions];
+        [self notifyObservers:@selector(inputQueue:inputData:numberOfPackets:) withObjects:self, subData, @(inNumberPacketDescriptions), nil];
+      });
       [_buffer replaceBytesInRange:range withBytes:NULL length:0];
     }
     [self _checkAudioQueueSuccess:AudioQueueEnqueueBuffer(_audioQueue, buffer, 0, NULL)];

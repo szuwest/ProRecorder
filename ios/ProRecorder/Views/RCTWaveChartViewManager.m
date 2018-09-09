@@ -64,4 +64,23 @@ RCT_EXPORT_METHOD(record:(nonnull NSNumber *)reactTag
    }];
 }
 
+RCT_EXPORT_METHOD(reset:(nonnull NSNumber *)reactTag
+                  reset:(BOOL)reset
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject
+                  ){
+  [self.bridge.uiManager addUIBlock:
+   ^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RCTWaveChartView *> *viewRegistry) {
+     
+     RCTWaveChartView *view = viewRegistry[reactTag];
+     if (!view || ![view isKindOfClass:[RCTWaveChartView class]]) {
+       RCTLogError(@"Cannot find RCTWaveChartView with tag #%@", reactTag);
+       reject(@"-1", @"Cannot find RCTWaveChartView", nil);
+       return;
+     }
+     [view reset:reset];
+     resolve(nil);
+   }];
+}
+
 @end

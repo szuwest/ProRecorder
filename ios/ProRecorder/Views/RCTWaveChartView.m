@@ -45,24 +45,15 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
   [self setMaxPoint:self.pointOfMs];
   self.lineColor = @"#4499dd";
   [self setLineColor:self.lineColor];
-  self.bgColor = @"#000000";
-  [self setBgColor:self.bgColor];
+  self.opaque = NO;
+  self.BGColor = [UIColor clearColor];
+  self.backgroundColor = [UIColor clearColor];
 }
+
 - (instancetype)init {
   NSLog(@"init");
   self = [super init];
   if ( self ) {
-    [self initVar];
-  }
-  return self;
-}
-
-- (instancetype)initWithFrame:(CGRect)frame
-{
-  NSLog(@"initWithFrame");
-  self = [super initWithFrame:frame];
-  if (self) {
-    NSLog(@"init");
     [self initVar];
   }
   return self;
@@ -144,7 +135,7 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
 }
 
 - (void)reDraw:(NSMutableArray*)data {
-  while( [self.uiPathData count] > (self._width - 40) ){
+  while( [self.uiPathData count] > (self._width - 40 - data.count) ){
     [ self.uiPathData removeObjectAtIndex:0 ];
   }
   for(NSArray *item in data){
@@ -155,6 +146,11 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
   [self setNeedsDisplay];
 }
 
+- (void)inputQueueDidStart:(SIAudioInputQueue *)inputQueue {
+  [self reset:YES];
+  self.onMessage(@{@"eventName":@"recordStart"});
+}
+
 - (void)inputQueue:(SIAudioInputQueue *)inputQueue inputData:(NSData *)data numberOfPackets:(NSNumber *)numberOfPackets {
   dispatch_async(dispatch_get_main_queue(), ^{
     [self onRecordData:(short *)[data bytes] dataLen:(int)data.length/2];
@@ -163,11 +159,18 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
 
 - (void)inputQueue:(SIAudioInputQueue *)inputQueue errorOccur:(NSError *)error {
   [self.record stop];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    self.onMessage(@{ @"eventName":@"recordEnd", @"filePath":@"error!"});
+  });
 }
 
 - (void)inputQueue:(SIAudioInputQueue *)inputQueue didStop:(NSString *)audioSavePath {
   NSLog(@"didStop");
-  if (!audioSavePath) {}
+  if (inputQueue.isCancel) {
+    self.onMessage(@{ @"eventName":@"recordEnd", @"filePath":@"cancel!"});
+  } else {
+    self.onMessage(@{ @"eventName":@"recordEnd", @"filePath":audioSavePath});
+  }
 }
 
 - (void)audioPlay:(AudioQueuePlay *)audioPlay playData:(NSData *)data {
@@ -257,11 +260,30 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
   return [UIColor colorWithRed:((float) r / 255.0f) green:((float) g / 255.0f) blue:((float) b / 255.0f) alpha:1.0f];
 }
 - (void)setLineColor:(NSString*) lineColor { self.LINEColor = [self colorWithHexString:lineColor]; }
-- (void)setBgColor:(NSString *)bgColor { self.BGColor = [self colorWithHexString:bgColor]; }
+
+- (void)setBgColor:(NSString *)bgColor {
+  if ([bgColor isEqualToString:@"transparent"]) {
+    self.BGColor = [UIColor clearColor];
+  } else {
+    self.BGColor = [self colorWithHexString:bgColor];
+  }
+}
+
 - (void)setPcmPath:(NSString*) pcmPath { self.play.pcmFile = pcmPath; }
+
 - (void)setPointOfMs:(int) pointOfMs {
   _pointOfMs = pointOfMs;
   _maxPoint = (16000 / 1000 * pointOfMs);
 }
+
 - (void)setDrawUI:(BOOL) drawUI {_drawUI = drawUI;}
+
+- (void)reset:(BOOL)reset {
+  if (reset) {
+    [self.uiPathData removeAllObjects];
+    [self.recordData removeAllObjects];
+    [self setNeedsDisplay];
+  }
+}
+
 @end
