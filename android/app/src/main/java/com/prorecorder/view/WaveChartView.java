@@ -52,6 +52,7 @@ class WaveChartViewListener implements AudioRecorder.AudioRecorderListener,PcmPl
     private int maxPoint = 16000 / 1000 * 400;
     private List<Integer> dataList = new ArrayList();
     private String listenMode;
+
     public short[] byteArray2ShortArray(byte[] data, int items) {
         ByteBuffer bf = ByteBuffer.wrap(data);
         bf.order(ByteOrder.LITTLE_ENDIAN);
@@ -61,14 +62,17 @@ class WaveChartViewListener implements AudioRecorder.AudioRecorderListener,PcmPl
         }
         return retVal;
     }
+
     public void setPointOfMs(int pointOfMs){
         this.maxPoint = 16000 / 1000 * pointOfMs;
     }
+
     public WaveChartViewListener(WaveChartView waveChartView,int pointOfMs,String listenMode) {
         this.waveChartView = waveChartView;
         setPointOfMs(pointOfMs);
         this.listenMode = listenMode;
     }
+
     public void onRecordStart() {
         Log.d("WaveChartViewListener","onRecordStart");
         if( listenMode == "isRecord" ){
@@ -76,20 +80,34 @@ class WaveChartViewListener implements AudioRecorder.AudioRecorderListener,PcmPl
         } else {
             waveChartView.playStatus = true;
         }
+        waveChartView.handler.post(new Runnable() {
+            @Override
+            public void run() {
+                waveChartView.setReset(true);
+            }
+        });
         sendEvent(listenMode == "isRecord" ? "recordStart":"playStart",new HashMap());
     }
+
     public void onAudioError(int errCode, String msg) {}
+
     public void onVolumeChange(double volume) { }
-    public void onRecordEnd(String filePath) {
+
+    public void onRecordEnd(String filePath, boolean isCancel) {
         if( listenMode == "isRecord" ){
             waveChartView.recordStatus = false;
         } else {
             waveChartView.playStatus = false;
         }
         HashMap keymap = new HashMap();
-        keymap.put("filePath",filePath);
+        if (isCancel) {
+            keymap.put("filePath", "cancel");
+        } else {
+            keymap.put("filePath", filePath);
+        }
         sendEvent(listenMode == "isRecord" ? "recordEnd":"playStop",keymap);
     }
+
     public void sendEvent(String EventName, HashMap<String,String> kayMap){
         WritableMap event = Arguments.createMap();
         event.putString("eventName", EventName);
@@ -100,6 +118,7 @@ class WaveChartViewListener implements AudioRecorder.AudioRecorderListener,PcmPl
         ((ReactContext)waveChartView.getContext()).getJSModule(RCTEventEmitter.class)
                 .receiveEvent(waveChartView.getId(), "topMessage", event);
     }
+
     public void onRecordData(byte[] recordData,int length){
         List<DataPoint> list  = new ArrayList();
         short[] outData = this.byteArray2ShortArray(recordData,length/2);
@@ -112,6 +131,7 @@ class WaveChartViewListener implements AudioRecorder.AudioRecorderListener,PcmPl
         }
         waveChartView.handler.sendMessage( getMsg( list ) );
     }
+
     public Message getMsg(List<DataPoint> list){
         Message msg = new Message();
         Bundle data = new Bundle();
@@ -127,9 +147,19 @@ class WaveChartViewListener implements AudioRecorder.AudioRecorderListener,PcmPl
         msg.setData(data);
         return msg;
     }
-    public void onPlayStart(){ onRecordStart(); }
-    public void onPlayEnd(){ onRecordEnd(""); }
-    public void onPlayData(byte[] recordData,int length){ onRecordData(recordData,length); }
+
+    public void onPlayStart(){
+        onRecordStart();
+    }
+
+    public void onPlayEnd(){
+        onRecordEnd("", false);
+    }
+
+    public void onPlayData(byte[] recordData,int length){
+        onRecordData(recordData,length);
+    }
+
     public void onProgress(int ms,int totalMs){
         HashMap keymap = new HashMap();
         keymap.put("ms",String.valueOf(ms));
@@ -151,6 +181,7 @@ public class WaveChartView extends View {
     public Handler handler= null;
     private String pcmPath = "";
     private boolean drawUI = true ,isWav = false;
+
     public WaveChartView(ThemedReactContext context) {
         super(context);
         Log.d("WaveChartView","WaveChartView");
@@ -180,6 +211,7 @@ public class WaveChartView extends View {
         pcmPlayer.addAudioPlayerListener(waveChartViewListener2);
 //        audioRecorder.setSaveWavFile(false);
     }
+
     @Override
     protected void onDraw(Canvas canvas) {
         if( drawUI ) {
@@ -192,16 +224,17 @@ public class WaveChartView extends View {
             super.onDraw(canvas);
         }
     }
+
     public void finalize( ){
         Log.d("WaveChartView","finalize");
         finalizeRecode();
     }
+
     private void finalizeRecode(){
         audioRecorder.removeRecordListener(waveChartViewListener);
-        audioRecorder.stopRecord();
         pcmPlayer.removeRecordListener(waveChartViewListener2);
-        pcmPlayer.stop();
     }
+
     public void drawWave(final List<DataPoint> point){
         while (pointData.size() > 0 && pointData.size() > width - 40 - point.size()) {
             pointData.remove(0);
@@ -229,6 +262,7 @@ public class WaveChartView extends View {
         path.lineTo(width, halfHeight);
         invalidate();
     }
+
     private void initWave(){
         needInit = false;
         path.reset();
@@ -236,6 +270,7 @@ public class WaveChartView extends View {
         path.lineTo(width,halfHeight);
         path.close();
     }
+
     private void setPaint(int lineColor){
         paint = new Paint();
         paint.setColor(lineColor);
@@ -243,68 +278,70 @@ public class WaveChartView extends View {
         paint.setAntiAlias(true);
         paint.setStrokeWidth(1);
     }
+
     public void setLineColor(@Nullable Integer lineColor){
         setPaint(lineColor);
         invalidate();
     }
+
     public void setPcmPath(@Nullable String pcmPath){
         Log.d("WaveChartView",pcmPath);
         this.pcmPath = pcmPath;
     }
+
     WaveChartViewListener waveChartViewListener2 = new WaveChartViewListener(this, pointOfMs, "isPlay");
-    public String setPlay(@Nullable Boolean play){
+    public String listenOnPlay(@Nullable Boolean play){
         pointData.clear();
         drawWave(new ArrayList());
-        if(playStatus != play) {
-            if (play) {
-                if (this.pcmPath.length() == 0) {
-                    return "need pcm Data";
-                } else {
-                    finalizeRecode();
-                    //play
-                    pcmPlayer.addAudioPlayerListener(waveChartViewListener2);
-                    pcmPlayer.setPointOfMs(pointOfMs);
-                    pcmPlayer.setPcmPath(this.pcmPath);
-                    pcmPlayer.setIsWav(this.isWav);
-                    this.pcmPlayer.start();
-                    return "play ok";
-                }
+        if (play) {
+            if (this.pcmPath.length() == 0) {
+                return "need pcm Data";
             } else {
-                pcmPlayer.stop();
-                return "stop ok";
+                pcmPlayer.addAudioPlayerListener(waveChartViewListener2);
+                pcmPlayer.setPointOfMs(pointOfMs);
+                pcmPlayer.setPcmPath(this.pcmPath);
+                pcmPlayer.setIsWav(this.isWav);
+                return "start listen";
             }
         } else {
-            return "not opt";
+            pcmPlayer.removeRecordListener(waveChartViewListener2);
+            return "stop listen";
         }
     }
 
     WaveChartViewListener waveChartViewListener = new WaveChartViewListener(this,pointOfMs,"isRecord");
-    public void setRecord(@Nullable Boolean record){
+    public void listenOnRecord(@Nullable Boolean record){
        pointData.clear();
        drawWave(new ArrayList());
-        if(recordStatus != record){
-            if(record){
-                finalizeRecode();
-                audioRecorder.addAudioRecorderListener(waveChartViewListener);
-                audioRecorder.startRecord();
-            } else {
-                audioRecorder.stopRecord();
-//                audioRecorder.removeRecordListener(waveChartViewListener);
-            }
-        }
+       if(record){
+           audioRecorder.addAudioRecorderListener(waveChartViewListener);
+       } else {
+           audioRecorder.removeRecordListener(waveChartViewListener);
+       }
     }
+
     public void setPointOfMs(@Nullable Integer pointOfMs){
         this.pointOfMs = pointOfMs;
         waveChartViewListener.setPointOfMs(pointOfMs);
     }
+
     public void setNeedDrawUI(@Nullable Boolean drawUI){
         this.drawUI = drawUI;
     }
+
     public void setIsWav(@Nullable Boolean isWav){
         this.isWav = isWav;
     }
+
     public void setBgColor(@Nullable Integer bgColor) {
         this.bgColor = bgColor;
     }
 
+    public void setReset(Boolean isReset) {
+        Log.d("WaveChartView", "isReset=" + isReset);
+        if (isReset) {
+            pointData.clear();
+            drawWave(new ArrayList());
+        }
+    }
 }

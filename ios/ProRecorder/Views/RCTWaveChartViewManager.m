@@ -24,12 +24,12 @@ RCT_EXPORT_VIEW_PROPERTY(pointOfMs, NSInteger)
 RCT_EXPORT_VIEW_PROPERTY(drawUI, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(onMessage, RCTDirectEventBlock)
 
-RCT_EXPORT_METHOD(play:(nonnull NSNumber *)reactTag
-                  play:(BOOL)play
+RCT_EXPORT_METHOD(listenOnPlay:(nonnull NSNumber *)reactTag
+                  listen:(BOOL)listen
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject
                   ){
-  NSLog(@"play: tag %ld, play=%d", (long)reactTag.integerValue, play);
+  NSLog(@"play: tag %ld, play=%d", (long)reactTag.integerValue, listen);
   [self.bridge.uiManager addUIBlock:
    ^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RCTWaveChartView *> *viewRegistry) {
      
@@ -40,16 +40,16 @@ RCT_EXPORT_METHOD(play:(nonnull NSNumber *)reactTag
        return;
      }
      
-     resolve([view play: play]);
+     resolve([view listenOnPlay: listen]);
    }];
 }
 
-RCT_EXPORT_METHOD(record:(nonnull NSNumber *)reactTag
-                  record:(BOOL)record
+RCT_EXPORT_METHOD(listenOnRecord:(nonnull NSNumber *)reactTag
+                  listen:(BOOL)listen
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject
                   ){
-  NSLog(@"record: tag %ld, record=%d", (long)reactTag.integerValue, record);
+  NSLog(@"record: tag %ld, record=%d", (long)reactTag.integerValue, listen);
   [self.bridge.uiManager addUIBlock:
    ^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RCTWaveChartView *> *viewRegistry) {
      
@@ -60,7 +60,7 @@ RCT_EXPORT_METHOD(record:(nonnull NSNumber *)reactTag
        return;
      }
      
-     resolve([view record: record]);
+     resolve([view listenOnRecord:listen]);
    }];
 }
 

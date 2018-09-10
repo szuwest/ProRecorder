@@ -1,10 +1,14 @@
 package com.prorecorder.record;
 
+import android.os.Environment;
+
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableArray;
 import com.prorecorder.record.utils.FileUtils;
 
 import java.io.File;
@@ -96,6 +100,22 @@ public class AudioFileManager extends ReactContextBaseJavaModule {
                 promise.resolve(null);
             }
         }).start();
+    }
+
+    @ReactMethod
+    public void listFileInDoc(String path, Promise promise) {
+        String recordDir = Environment.getExternalStorageDirectory() + "/" + path;
+        File recordDirFile = new File(recordDir);
+        File[] files = recordDirFile.listFiles();
+        WritableArray wavFiles = Arguments.createArray();
+        if (files != null && files.length > 0) {
+            for (File file : files) {
+                if (file.isFile() && file.getName().toLowerCase().endsWith(".wav")) {
+                    wavFiles.pushString(file.getAbsolutePath());
+                }
+            }
+        }
+        promise.resolve(wavFiles);
     }
 
 

@@ -78,10 +78,10 @@ export default class WaveChartView extends Component<WaveChartViewProperties> {
     getHandle() {
         return findNodeHandle(this.refs.view);
     }
-    play(play: boolean) {
-        return this.runCommand('play', [play]);
+    listenOnPlay(play: boolean) {
+        return this.runCommand('listenOnPlay', [play]);
     }
-    record(record: boolean) {
-        return this.runCommand('record', [record]);
+    listenOnRecord(record: boolean) {
+        return this.runCommand('listenOnRecord', [record]);
     }
 }

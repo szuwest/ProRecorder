@@ -10,7 +10,7 @@
 
 @property (nonatomic, copy) RCTDirectEventBlock onMessage;
 
-- (NSString*) play:(BOOL) play;
-- (NSString*) record:(BOOL) record;
+- (NSString*) listenOnPlay:(BOOL)listen;
+- (NSString*) listenOnRecord:(BOOL)listen;
 - (void)reset:(BOOL)reset;
 @end

@@ -67,6 +67,7 @@ public class AudioReact extends ReactContextBaseJavaModule {
      * 采用默认参数录音
      * @param promise
      */
+    @ReactMethod
     public void startRecord(Promise promise) {
         if (!Environment.getExternalStorageState().equals( Environment.MEDIA_MOUNTED)) {
             //sdcard状态是没有挂载的情况
@@ -126,6 +127,13 @@ public class AudioReact extends ReactContextBaseJavaModule {
     @ReactMethod
     public void resumeRecord() {
         audioRecorder.resume();
+    }
+
+    @ReactMethod
+    public void cancelRecording(final Promise promise) {
+        audioRecorder.cancelRecord();
+        stopPromise = null;
+        promise.resolve("");
     }
 
     /**
@@ -201,7 +209,7 @@ public class AudioReact extends ReactContextBaseJavaModule {
 //            }
         }
 
-        public void onRecordEnd(final String filePath) {
+        public void onRecordEnd(final String filePath, boolean isCancel) {
             if (audioReact.stopPromise != null) {
                 audioReact.stopPromise.resolve(filePath);
             }

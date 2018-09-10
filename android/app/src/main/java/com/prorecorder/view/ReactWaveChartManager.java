@@ -45,13 +45,14 @@ public class ReactWaveChartManager extends SimpleViewManager<WaveChartView> {
     }
     @Override
     public @Nullable Map<String, Integer> getCommandsMap() {
-        return MapBuilder.of("record", 1,"play", 2);
+        return MapBuilder.of("listenOnRecord", 1,"listenOnPlay", 2, "reset",3);
     }
     @Override
     public void receiveCommand(WaveChartView root, int commandId, @Nullable ReadableArray args) {
         Log.d("ReactWaveChartManager",String.valueOf(commandId));
-        if(commandId == 1) root.setRecord(args.getBoolean(0));
-        if(commandId == 2) root.setPlay(args.getBoolean(0));
+        if(commandId == 1) root.listenOnRecord(args.getBoolean(0));
+        if(commandId == 2) root.listenOnPlay(args.getBoolean(0));
+        if (commandId == 3) root.setReset(args.getBoolean(0));
     }
 
     @ReactProp(name = "pointOfMs",defaultInt = 400 )  // 16000 / 400

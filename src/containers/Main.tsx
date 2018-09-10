@@ -122,31 +122,31 @@ export default class Main extends Component<Props,{
                 onplayProgress={this.onplayProgress.bind(this)}
                 pcmPath={this.state.pcmPath}
                 isWav={true}
-                bgColor="#000"
+                bgColor="#eee"
                 lineColor="#49d" pointOfMs={10} style={{ height: 300 }} />
         </View>
 
         <View style={{ margin: 10 }}>
             <Button title="开始录制" onPress={() => {
-                // this.waveView.record(true);
+                // this.waveView.listenOnRecord(true);
                 this.startRecord();
             }} />
         </View>
         <View style={{ margin: 10 }}>
             <Button title="停止录制" onPress={() => {
-                // this.waveView.record(false);
+                // this.waveView.listenOnRecord(false);
               this.stopRecord();
             }} />
         </View>
         <View style={{ margin: 10 }}>
             <Button title="开始播放" onPress={() => {
-                // this.waveView.play(true);
+                // this.waveView.listenOnPlay(true);
                 this.startPlay();
             }} />
         </View>
         <View style={{ margin: 10 }}>
             <Button title="停止播放" onPress={() => {
-                // this.waveView.play(false);
+                // this.waveView.listenOnPlay(false);
                 this.stopPlay();
             }} />
         </View>

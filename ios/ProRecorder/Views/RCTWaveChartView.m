@@ -60,48 +60,32 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
 }
 
 - (void)dealloc{
-  if(self.record.isRunning){
-    [self.record stop];
-    //    self.record.delegate = nil;
-  }
   [self.record removeObserver:self];
-  if (self.play.isPlaying) {
-    [self.play stop];
-//    self.play.delegate = nil;
-  }
   [self.play removeObserver:self];
 }
 
-- (NSString*) play:(BOOL) play{
+- (NSString*) listenOnPlay:(BOOL)listen{
   [self.uiPathData removeAllObjects];
   [self.recordData removeAllObjects];
-  if( self.play.isPlaying != play ){
-    if(play){
-      [self.play play];
-      return @"play start";
-    } else {
-      [self.play stop];
-      return @"play stop";
-    }
+  if(listen){
+    [self.play addObserver:self];
+    return @"start listen play";
+  } else {
+    [self.play removeObserver:self];
+    return @"stop listen play";
   }
   return @"not opt";
 }
 
-- (NSString*) record:(BOOL) record{
+- (NSString*) listenOnRecord:(BOOL)listen{
   [self.uiPathData removeAllObjects];
   [self.recordData removeAllObjects];
-  if(self.record.isRunning != record){
-    if (record){
-      self.currentVoicePath = [self createSavePath];
-      self.record.audioSavePath = self.currentVoicePath;
-      BOOL succ = [self.record start];
-      if(succ){ self.onMessage(@{@"eventName":@"recordStart"}); }
-      return succ ? @"start succ" : @"start fail";
-    } else {
-      [self.record stop];
-      self.onMessage(@{ @"eventName":@"recordEnd", @"filePath":self.currentVoicePath});
-      return @"stop succ";
-    }
+  if (listen){
+    [self.record addObserver:self];
+    return @"listen record";
+  } else {
+    [self.record removeObserver:self];
+    return @"stop listen";
   }
   return @"not operating";
 }
@@ -166,7 +150,7 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
 
 - (void)inputQueue:(SIAudioInputQueue *)inputQueue didStop:(NSString *)audioSavePath {
   NSLog(@"didStop");
-  if (inputQueue.isCancel) {
+  if (inputQueue.isCancel || !audioSavePath) {
     self.onMessage(@{ @"eventName":@"recordEnd", @"filePath":@"cancel!"});
   } else {
     self.onMessage(@{ @"eventName":@"recordEnd", @"filePath":audioSavePath});
@@ -182,16 +166,11 @@ typedef enum { R, G, B, A } UIColorComponentIndices;
   self.onMessage(@{ @"eventName":@"playEnd"});
 }
 - (void)audioPlay:(AudioQueuePlay *)audioPlay didPlayStart:(NSNumber *)t {
+  [self reset:YES];
   self.onMessage(@{ @"eventName":@"playStart"});
 }
 - (void)audioPlay:(AudioQueuePlay *)audioPlay playProgress:(NSNumber *)ms totalMs:(NSNumber *)totalMs {
   self.onMessage(@{ @"eventName":@"playProgress",@"ms":[NSString stringWithFormat:@"%d",ms.intValue], @"totalMs":[NSString stringWithFormat:@"%d",totalMs.intValue] });
-}
-
-- (NSString *)createSavePath {
-  NSString *docsDir = NSTemporaryDirectory();
-  NSString *voiceFileName = [NSString stringWithFormat:@"%ld.pcm", (long)[[NSDate date] timeIntervalSince1970] ];
-  return [docsDir stringByAppendingPathComponent:voiceFileName];
 }
 
 - (void)drawRect:(CGRect)rect

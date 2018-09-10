@@ -30,7 +30,7 @@ public class AudioRecorder {
 
         void onVolumeChange(double volume);
 
-        void onRecordEnd(String filePath);
+        void onRecordEnd(String filePath, boolean isCancel);
 
         void onRecordData(byte[] recordData, int length);
     }
@@ -45,7 +45,7 @@ public class AudioRecorder {
     public static final int ENCODING_PCM = AudioFormat.ENCODING_PCM_16BIT;
     //录音保存地址
     public final static String ROOT_PATH = Environment.getExternalStorageDirectory() + "/ProRecorder/";
-    public final static String RECORD_DIR = ROOT_PATH + "record/";
+    public final static String RECORD_DIR = ROOT_PATH;
 
     private static final int VOL_GET_INTERVAL = 100;
 
@@ -493,7 +493,7 @@ public class AudioRecorder {
 //                        listeners.get(i).onRecordEnd(filePath);
                         WeakReference<AudioRecorderListener> wkL = listeners.get(i);
                         if (wkL.get() != null) {
-                            wkL.get().onRecordEnd(filePath);
+                            wkL.get().onRecordEnd(filePath, cancelRecord);
                         }
                     }
                     break;
